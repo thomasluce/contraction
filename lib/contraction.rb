@@ -1,7 +1,8 @@
+require 'string'
 module Contraction
-  def self.extended(mod)
+  def self.included(mod)
     instance = mod.allocate
-    instance_methods = (mod.instance_methods - Object.instance_methods - Contracts.instance_methods)
+    instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
 
     file_contents_by_filename = {}
     instance_methods.each do |method_name|
@@ -45,8 +46,6 @@ module Contraction
       arg_checks = []
       result_check = nil
       mod.send(:define_method, method_name) do |*method_args|
-        # FIXME: This needs to handle optional arguments as well
-        raise ArgumentError.new("Wrong number of arguments (#{method_args.length} for #{args.length})") unless method_args.length == args.length
         named_args = args.each_with_index.inject({}) do |h, (arg, index)|
           type, name, message, contract = arg
           h[name] = method_args[index]
