@@ -155,6 +155,91 @@ describe Contraction do
     end
   end
 
-  describe 'method arguments'
-  # TODO: back-fill these puppies.
+  describe 'method arguments' do
+    context 'with no definition' do
+      before do
+        class NoParams
+          ##
+          # Some docs
+          def foobar(foo,bar)
+          end
+
+          include Contraction
+        end
+      end
+
+      it "doesn't explode" do
+        lambda { NoParams.new.foobar(1,2) }.should_not raise_error
+      end
+
+      it "allows the method to be called however you like" do
+        np = NoParams.new
+        lambda {
+          np.foobar(1,2)
+          np.foobar(:foo, :bar)
+          np.foobar('foo', nil)
+        }.should_not raise_error
+      end
+    end
+
+    context 'with type definition' do
+      before do
+        class ParamType
+          ##
+          # Some docs
+          # @param [String] foo Must be a string
+          def foobar(foo)
+          end
+
+          include Contraction
+        end
+      end
+
+      it "doesn't explode" do
+        lambda { ParamType.new.foobar("String") }.should_not raise_error
+      end
+
+      it 'raises an error if the wrong type is passed' do
+        lambda {
+          ParamType.new.foobar(:not_a_string)
+        }.should raise_error(ArgumentError, "foo (:not_a_string) must be a String")
+      end
+
+      it 'allows the call with the correct type' do
+        lambda {
+          ParamType.new.foobar('string, it is')
+        }.should_not raise_error(ArgumentError)
+      end
+    end
+
+    context 'with type and contract' do
+      before do
+        class ParamTypeAndContract
+          ##
+          # Some doc
+          # @param [String] foo Should be a string that { foo.include?('bar') }
+          def foobar(foo)
+          end
+
+          include Contraction
+        end
+      end
+
+      it "doesn't explode" do
+        lambda { ParamTypeAndContract.new.foobar("bar") }.should_not raise_error
+      end
+
+      it "raises an error if the contract is not matched" do
+        lambda { ParamTypeAndContract.new.foobar("not b-a-r") }.should raise_error(ArgumentError, 'foo (Should be a string that ) must fullfill "named_args[\"foo\"].include?(\'bar\')", but is "not b-a-r"')
+      end
+
+      it "raises an error if the type is not matched" do
+        lambda { ParamTypeAndContract.new.foobar(:bar) }.should raise_error(ArgumentError, "foo (:bar) must be a String")
+      end
+
+      it "allows the method call if the contract and type are matched" do
+        lambda { ParamTypeAndContract.new.foobar("totally has bar in it") }.should_not raise_error
+      end
+    end
+  end
 end
