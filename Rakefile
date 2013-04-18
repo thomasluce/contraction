@@ -25,6 +25,6 @@ Jeweler::Tasks.new do |gem|
     fn =~ /^tmp\// ||
     fn =~ /^log\// ||
     fn =~ /^vendor\/cache\// ||
-    fn =~ /^spec\// ||
+    fn =~ /^spec\//
   end
 end
