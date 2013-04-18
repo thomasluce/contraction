@@ -8,6 +8,7 @@ Jeweler::Tasks.new do |gem|
   gem.version = File.read("./VERSION")
   gem.summary = "A simple desgin-by-contract library"
   gem.description = "Using RDoc documentation as your contract definition, you get solid code, and good docs. Win-win!"
+  gem.homepage = "https://github.com/thomasluce/contraction"
   gem.email = "thomas.luce@gmail.com"
   gem.authors = ["Thomas Luce"]
 
