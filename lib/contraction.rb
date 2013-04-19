@@ -56,7 +56,58 @@ module Contraction
     end
   end
 
-  def self.patch_class_method
+  def self.patch_class_method(mod, method_name)
+    args, returns = parse_comments(mod.method(method_name).source_location)
+    arg_names = args.map { |a| a[1] }
+    arg_names.each do |name|
+      returns[-1] = returns[-1].gsub(name, "named_args[#{name.inspect}]")
+    end
+
+    old_method = mod.method(method_name)
+
+    arg_checks = []
+    result_check = nil
+    mod.define_singleton_method(method_name) do |*method_args|
+      named_args = args.each_with_index.inject({}) do |h, (arg, index)|
+        type, name, message, contract = arg
+      h[name] = method_args[index]
+      h
+      end
+
+      b = binding
+      if arg_checks.empty?
+        arg_checks = args.map do |arg|
+          type, name, message, contract = arg
+          value = named_args[name]
+          checker = nil
+          lambda { |named_args|
+            raise ArgumentError.new("#{name} (#{value.inspect}) must be a #{type}") unless value.is_a?(type)
+            checker = eval("lambda { |named_args| #{contract} }", b) if checker.nil?
+            unless checker.call(named_args)
+              raise ArgumentError.new("#{name} (#{message}) must fullfill #{contract.inspect}, but is #{value.inspect}")
+            end
+          }
+        end
+      end
+      arg_checks.each { |c| c.call(named_args) }
+
+      result = old_method.call(*method_args)
+
+      if result_check.nil?
+        checker = nil
+        result_check = lambda { |named_args|
+          type, message, contract = returns
+          raise ArgumentError.new("Return value of #{method_name} must be a #{type}") unless result.is_a?(type)
+          checker = eval("lambda { |named_args| #{contract} }", b) if checker.nil?
+          unless checker.call(named_args)
+            raise ArgumentError.new("Return value of #{method_name} (#{message}) must fullfill #{contract.inspect}, but is #{result.inspect}")
+          end
+        }
+      end
+      result_check.call(named_args)
+
+      result
+    end
   end
 
   def self.file_content(filename)
@@ -101,6 +152,11 @@ module Contraction
 
     instance_methods.each do |method_name|
       patch_instance_method(mod, method_name)
+    end
+
+    class_methods = (mod.methods - Object.methods - Contraction.methods)
+    class_methods.each do |method_name|
+      patch_class_method(mod, method_name)
     end
   end
 end

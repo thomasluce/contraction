@@ -250,5 +250,26 @@ describe Contraction do
   end
 
   describe 'class methods' do
+    before do
+      class WithClassMethods
+        ##
+        # This is some documentation
+        # @param [String] foo is a string { foo.to_s.include?('bar') }
+        # @return [Fixnum] the length of the string
+        def self.foo(foo)
+          foo.length
+        end
+
+        include Contraction
+      end
+    end
+
+    it "doens't explode" do
+      lambda { WithClassMethods.foo("bar") }.should_not raise_error
+    end
+
+    it "applies contracts and type checks" do
+      lambda { WithClassMethods.foo("no b.a.r") }.should raise_error(ArgumentError)
+    end
   end
 end
