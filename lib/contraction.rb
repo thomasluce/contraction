@@ -4,6 +4,7 @@ module Contraction
   def self.patch_instance_method(mod, method_name)
     instance = mod.allocate
     args, returns = parse_comments(instance.method(method_name).source_location)
+    return unless args && returns && (args.length > 0 || returns.can_check?)
 
     arg_names = args.map(&:name)
     arg_names.each do |name|
@@ -28,6 +29,8 @@ module Contraction
 
   def self.patch_class_method(mod, method_name)
     args, returns = parse_comments(mod.method(method_name).source_location)
+    return unless args && returns && (args.length > 0 || returns.can_check?)
+
     arg_names = args.map(&:name)
     arg_names.each do |name|
       returns.contract = returns.contract.gsub(name, "named_args[#{name.inspect}]")
@@ -57,6 +60,7 @@ module Contraction
   end
 
   def self.parse_comments(location)
+    return unless location
     file, line = location
     filename = File.expand_path(file)
 

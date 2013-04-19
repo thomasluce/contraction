@@ -12,6 +12,10 @@ module Contraction
       create_checkers!
     end
 
+    def can_check?
+      @type_checker || @contract_checker
+    end
+
     def check!(value, named_args)
       @type_checker.call(value, named_args) if @type_checker
       if @contract_checker
