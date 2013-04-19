@@ -241,5 +241,14 @@ describe Contraction do
         lambda { ParamTypeAndContract.new.foobar("totally has bar in it") }.should_not raise_error
       end
     end
+
+    describe 'optional arguments' do
+    end
+
+    describe 'blocks' do
+    end
+  end
+
+  describe 'class methods' do
   end
 end
