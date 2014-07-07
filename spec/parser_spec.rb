@@ -60,6 +60,24 @@ describe Contraction::Parser do
         expect(p.valid?(Duck.new)).to be true
         expect(p.valid?(Goose.new)).to be false
       end
+
+      it 'verifies a collection with multiple possible types' do
+        p = Contraction::Parser.parse('# @param [Array<Fixnum,String>] foo foo is bar')
+        expect(p.valid?([1])).to be true
+        expect(p.valid?(['1'])).to be true
+        expect(p.valid?(['1', 1])).to be true
+        expect(p.valid?(['1', :sym])).to be false
+      end
+
+      it 'verifies a fixed-length collection' do
+        p = Contraction::Parser.parse('# @param [Array(Fixnum, Fixnum)] foo foo is bar')
+        expect(p.valid?([1,1])).to be true
+        expect(p.valid?([1])).to be false
+        expect(p.valid?([1, 1, 1])).to be false
+      end
+
+      it 'verifies a hash in long-hand'
+      it 'verifies a hash in short-hand'
     end
   end
 
@@ -103,6 +121,14 @@ describe Contraction::Parser do
           expect(p.legal_types.first).to be_a Contraction::Parser::Type
           expect(p.legal_types.first.legal_types.length).to eq 1
           expect(p.legal_types.first.legal_types.first).to be Fixnum
+        end
+
+        it 'parses a collection with a list of possible types'
+        it 'parses a fixed-length collection'
+
+        describe 'hashes' do
+          it 'parses a Hash in long-hand form'
+          it 'parses a Hash in short-hand form'
         end
       end
     end
