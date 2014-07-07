@@ -96,7 +96,7 @@ module Contraction
 
   public
 
-  def self.included(mod)
+  def self.update_contracts(mod)
     instance = mod.allocate
     instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
 
@@ -106,6 +106,10 @@ module Contraction
       args, returns = extract_params_and_return(file_contents[0..line_no-2].reverse)
       define_wrapped_method(mod, method_name, args, returns)
     end
+  end
+
+  def self.included(mod)
+    update_contracts(mod)
   end
 end
 
