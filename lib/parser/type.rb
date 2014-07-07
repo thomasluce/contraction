@@ -21,7 +21,7 @@ module Contraction
           list.split(',').each do |type|
             @legal_types << Type.new(type.strip)
           end
-        elsif part.include? '#'
+        elsif part =~ /^#/
           # It's a duck-typed object of some kind
           methods = part.split(",").map { |p| p.strip.gsub(/^#/,'').to_sym }
           @method_requirements += methods
@@ -36,12 +36,12 @@ module Contraction
         elsif part.include? 'Hash{'
           # It's a hash with specific key-value pair types
           parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
-          @key_types = parts['key_types'].split(',').map { |t| t.strip.constantize }
-          @value_types = parts['value_types'].split(',').map { |t| t.strip.constantize }
+          @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+          @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
         elsif part.include? '{'
           if parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
-            @key_types = parts['key_types'].split(',').map { |t| t.strip.constantize }
-            @value_types = parts['value_types'].split(',').map { |t| t.strip.constantize }
+            @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+            @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
           else
             # It's a struct type.
             # TODO: do that
@@ -65,7 +65,12 @@ module Contraction
       def check_hash(thing)
         return true if @key_types.empty? or @value_types.empty?
         return false unless thing.is_a?(Hash)
-        thing.keys.all? { |k| @key_types.include?(k.class) } && thing.values.all? { |v| @value_types.include?(v.class) }
+        thing.keys.all? do |k|
+          @key_types.any? { |kt| kt.is_a?(Symbol) ? k.respond_to?(kt) : k.is_a?(kt) }
+        end &&
+        thing.values.all? do |v|
+          @value_types.any? { |vt| vt.is_a?(Symbol) ? v.respond_to?(vt) : v.is_a?(vt) }
+        end
       end
 
       def check_length(thing)
