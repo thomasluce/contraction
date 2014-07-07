@@ -1,21 +1,15 @@
 module Contraction
   module Parser
     class Type
-      attr_reader :legal_types, :method_requirements, :length
+      attr_reader :legal_types, :method_requirements, :length, :key_types, :value_types
 
       def initialize(part)
         @legal_types         = []
         @method_requirements = []
         @length              = -1
+        @key_types           = []
+        @value_types         = []
 
-        # An array of various objects
-        # Array<String, Symbol, #read>
-        # A collection type other than an Array
-        # Set<Number>
-        # An fixed-size array of specific objects
-        # Array(String, Symbol)
-        # A Hash with one key type and a few value types
-        # Hash{String => Symbol, Number}
         # A complex example showing a possibility of many different types
         # Array<Foo, Bar>, List(String, Symbol, #to_s), {Foo, Bar => Symbol, Number}
         # Finally, some shorthands for collections and hashes
@@ -41,7 +35,9 @@ module Contraction
           end
         elsif part.include? 'Hash{'
           # It's a hash with specific key-value pair types
-          # TODO: do that
+          parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
+          @key_types = parts['key_types'].split(',').map { |t| t.strip.constantize }
+          @value_types = parts['value_types'].split(',').map { |t| t.strip.constantize }
         elsif part.include? '{'
           # It could be a hash (look for rockets), or it could be a Struct-type.
           # TODO: do this
@@ -55,10 +51,17 @@ module Contraction
       def check(thing)
         check_types(thing) &&
         check_duck_typing(thing) &&
-        check_length(thing)
+        check_length(thing) &&
+        check_hash(thing)
       end
 
       private
+
+      def check_hash(thing)
+        return true if @key_types.empty? or @value_types.empty?
+        return false unless thing.is_a?(Hash)
+        thing.keys.all? { |k| @key_types.include?(k.class) } && thing.values.all? { |v| @value_types.include?(v.class) }
+      end
 
       def check_length(thing)
         return true if @length == -1

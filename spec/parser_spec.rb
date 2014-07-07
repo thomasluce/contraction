@@ -76,7 +76,14 @@ describe Contraction::Parser do
         expect(p.valid?([1, 1, 1])).to be false
       end
 
-      it 'verifies a hash in long-hand'
+      it 'verifies a hash in long-hand' do
+        p = Contraction::Parser.parse('# @param [Hash{Symbol => String, Fixnum}] foo foo is bar')
+        expect(p.valid?({ foo: 1 })).to be true
+        expect(p.valid?({ foo: 'one' })).to be true
+        expect(p.valid?({ 'foo' => 1 })).to be false
+        expect(p.valid?({ foo: :bar })).to be false
+      end
+
       it 'verifies a hash in short-hand'
     end
   end
