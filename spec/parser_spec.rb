@@ -85,59 +85,7 @@ describe Contraction::Parser do
       end
 
       it 'verifies a hash in short-hand'
-    end
-  end
-
-  context 'parsing types' do
-    describe 'types' do
-      describe 'simple object types' do
-        it 'parses a simple object to a simple type' do
-          param = Contraction::Parser::ParamLine.new(type: 'Fixnum')
-          expect(param.types.length).to eq 1
-        end
-
-        it 'parses a simple object to the correct type' do
-          param = Contraction::Parser::ParamLine.new(type: 'Fixnum')
-          p = param.types.first
-          expect(p.legal_types.first).to be Fixnum
-        end
-      end
-
-      describe 'duck-typed objects' do
-        it 'parses a duck-type method signature' do
-          param = Contraction::Parser::ParamLine.new(type: '#quack')
-          p = param.types.first
-          expect(p.method_requirements).to eq [:quack]
-        end
-
-        it 'parses a list of duck-typed things' do
-          param = Contraction::Parser::ParamLine.new(type: '#quack, #waddle')
-          p = param.types.first
-          expect(p.method_requirements).to eq [:quack, :waddle]
-        end
-      end
-
-      describe 'collection types' do
-        # NOTE: For now I'm not differentiating between collection types;
-        # everything is an array as far as Contraction goes. So, make sure to
-        # define good contracts for things that depend on the behavior of Sets
-        # or Lists, etc. Future improvements coming.
-        it 'parses a simple collection with a simple type' do
-          param = Contraction::Parser::ParamLine.new(type: 'Array<Fixnum>')
-          p = param.types.first
-          expect(p.legal_types.first).to be_a Contraction::Parser::Type
-          expect(p.legal_types.first.legal_types.length).to eq 1
-          expect(p.legal_types.first.legal_types.first).to be Fixnum
-        end
-
-        it 'parses a collection with a list of possible types'
-        it 'parses a fixed-length collection'
-
-        describe 'hashes' do
-          it 'parses a Hash in long-hand form'
-          it 'parses a Hash in short-hand form'
-        end
-      end
+      it 'verifies hashes that use duck-typing for key and value types'
     end
   end
 end
