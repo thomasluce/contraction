@@ -58,7 +58,7 @@ module Contraction
     end
 
     class Type
-      attr_reader :legal_types
+      attr_reader :legal_types, :method_requirements, :length
 
       def initialize(part)
         @legal_types         = []
@@ -91,7 +91,8 @@ module Contraction
           end
         elsif part.include? '#'
           # It's a duck-typed object of some kind
-          @method_requirements << part.gsub(/^#/, '').to_sym
+          methods = part.split(",").map { |p| p.strip.gsub(/^#/,'').to_sym }
+          @method_requirements += methods
         elsif part.include? '('
           # It's a fixed-length list
           list = part.match(/\((?<list>[^\>]+)\)/)['list']
@@ -114,6 +115,21 @@ module Contraction
 
       # Check weather or not thing is a given type.
       def check(thing)
+        check_types(thing) &&
+        check_duck_typing(thing)
+      end
+
+      private
+
+      def check_duck_typing(thing)
+        return true if @method_requirements.empty?
+        @method_requirements.all? do |m|
+          thing.respond_to? m
+        end
+      end
+
+      def check_types(thing)
+        return true if @legal_types.empty?
         @legal_types.any? do |t|
           if t.is_a?(Contraction::Parser::Type)
             thing.is_a?(Enumerable) && t.check(thing)

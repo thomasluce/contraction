@@ -79,8 +79,17 @@ describe Contraction::Parser do
       end
 
       describe 'duck-typed objects' do
-        it 'parses a duck-type method signature'
-        it 'parses a list of duck-typed things'
+        it 'parses a duck-type method signature' do
+          param = Contraction::Parser::ParamLine.new(type: '#quack')
+          p = param.types.first
+          expect(p.method_requirements).to eq [:quack]
+        end
+
+        it 'parses a list of duck-typed things' do
+          param = Contraction::Parser::ParamLine.new(type: '#quack, #waddle')
+          p = param.types.first
+          expect(p.method_requirements).to eq [:quack, :waddle]
+        end
       end
 
       describe 'collection types' do
