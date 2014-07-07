@@ -84,8 +84,14 @@ describe Contraction::Parser do
         expect(p.valid?({ foo: :bar })).to be false
       end
 
-      it 'verifies a hash in short-hand'
+      it 'verifies a hash in short-hand' do
+        p = Contraction::Parser.parse('# @param [{ String => Fixnum }] foo foo is bar')
+        expect(p.valid?({ foo: 1 })).to be false
+        expect(p.valid?({ "foo" => 1 })).to be true
+      end
+
       it 'verifies hashes that use duck-typing for key and value types'
+      it 'can parse and verify struct-types'
     end
   end
 end

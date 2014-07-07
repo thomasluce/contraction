@@ -39,8 +39,13 @@ module Contraction
           @key_types = parts['key_types'].split(',').map { |t| t.strip.constantize }
           @value_types = parts['value_types'].split(',').map { |t| t.strip.constantize }
         elsif part.include? '{'
-          # It could be a hash (look for rockets), or it could be a Struct-type.
-          # TODO: do this
+          if parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
+            @key_types = parts['key_types'].split(',').map { |t| t.strip.constantize }
+            @value_types = parts['value_types'].split(',').map { |t| t.strip.constantize }
+          else
+            # It's a struct type.
+            # TODO: do that
+          end
         else
           # It's a regular-ass type.
           @legal_types << part.constantize
