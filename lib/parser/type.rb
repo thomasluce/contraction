@@ -13,7 +13,9 @@ module Contraction
         parse(part)
       end
 
-      # Check weather or not thing is a given type.
+      # Checks weather or not thing is a given type.
+      # @param [String] thing A string containing a type definition. For example:
+      #    Array<String>
       def check(thing)
         check_types(thing) &&
         check_duck_typing(thing) &&

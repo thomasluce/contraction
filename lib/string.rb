@@ -1,5 +1,6 @@
 class String
   # This is taken strait copy-pasta from ActiveSupport. All praise be to them.
+  # @return [Object] The class or module named by the string.
   def constantize
     names = self.split('::')
     names.shift if names.empty? || names.first.empty?

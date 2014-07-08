@@ -13,6 +13,8 @@ module Contraction
       get_method_definition
     end
 
+    # Test weather the arguments to a method are of the correct type, and meet
+    # the correct contractual obligations.
     def valid_args?(*method_args)
       return true if @rules.nil?
       named_args = params.each_with_index.inject({}) do |h, (param, index)|
@@ -27,6 +29,8 @@ module Contraction
       end
     end
 
+    # Tests weather or not the return value is of the correct type and meets
+    # the correct contractual obligations.
     def valid_return?(*method_args, result)
       named_args = params.each_with_index.inject({}) do |h, (param, index)|
         h[param] = method_args[index]

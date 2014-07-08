@@ -2,6 +2,28 @@ require 'string'
 require 'parser'
 
 module Contraction
+  # Call this method to update contracts for any methods that may have been
+  # added after the class/module file was loaded by some third-party code. It's
+  # unlikely that you will need this method, but I thought I would include it
+  # just in case.
+  # @param [Class] mod The module or class to update contracts for.
+  def self.update_contracts(mod)
+    instance = mod.allocate
+    instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
+
+    instance_methods.each do |method_name|
+      file_contents, line_no = read_file_for_method(instance, method_name)
+
+      contract = Contraction::Parser.parse(file_contents[0..line_no-2].reverse, mod, method_name)
+      define_wrapped_method(mod, method_name, contract)
+    end
+  end
+
+  # Called by ruby when Contraction is included in a class.
+  def self.included(mod)
+    update_contracts(mod)
+  end
+
   private
 
   RETURN_LINE_REGEX = /^#\s*@return\s+(?<type>\[[^\]]+\])?\s*(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
@@ -54,24 +76,6 @@ module Contraction
       contract.valid_return?(*method_args, result)
       result
     end
-  end
-
-  public
-
-  def self.update_contracts(mod)
-    instance = mod.allocate
-    instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
-
-    instance_methods.each do |method_name|
-      file_contents, line_no = read_file_for_method(instance, method_name)
-
-      contract = Contraction::Parser.parse(file_contents[0..line_no-2].reverse, mod, method_name)
-      define_wrapped_method(mod, method_name, contract)
-    end
-  end
-
-  def self.included(mod)
-    update_contracts(mod)
   end
 end
 
