@@ -3,7 +3,6 @@ module Contraction
     class Type
       attr_reader :legal_types, :method_requirements, :length, :key_types, :value_types
 
-      # FIXME: There is still a lot of ugly in this method...
       def initialize(part)
         @legal_types         = []
         @method_requirements = []
@@ -11,48 +10,7 @@ module Contraction
         @key_types           = []
         @value_types         = []
 
-        # A complex example showing a possibility of many different types
-        # Array<Foo, Bar>, List(String, Symbol, #to_s), {Foo, Bar => Symbol, Number}
-        # Finally, some shorthands for collections and hashes
-        # <String, Symbol>, (String, Symbol), {Key=>Value}
-
-        if part.include? '<'
-          # It's some kind of container that can only hold certain things
-          list = part.match(/\<(?<list>[^\>]+)\>/)['list']
-          list.split(',').each do |type|
-            @legal_types << Type.new(type.strip)
-          end
-        elsif part =~ /^#/
-          # It's a duck-typed object of some kind
-          methods = part.split(",").map { |p| p.strip.gsub(/^#/,'').to_sym }
-          @method_requirements += methods
-        elsif part.include? '('
-          # It's a fixed-length list
-          list = part.match(/\((?<list>[^\>]+)\)/)['list']
-          parts = list.split(',')
-          @length = parts.length
-          parts.each do |type|
-            @legal_types << Type.new(type.strip)
-          end
-        elsif part.include? 'Hash{'
-          # It's a hash with specific key-value pair types
-          parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
-          @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
-          @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
-        elsif part.include? '{'
-          if parts = part.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
-            @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
-            @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
-          else
-            # It's a reference to another documented type defined someplace in
-            # the codebase. We can ignore the reference, and treat it like a
-            # normal type.
-            @legal_types << part.gsub(/\{|\}/, '').constantize
-          end
-        else
-          # It's a regular-ass type.
-          @legal_types << part.constantize
-        end
+        parse(part)
       end
 
       # Check weather or not thing is a given type.
@@ -64,6 +22,72 @@ module Contraction
       end
 
       private
+
+      def parse(line)
+        parse_typed_container(line) ||
+          parse_duck_type(line) ||
+          parse_fixed_list(line) ||
+          parse_hash(line) ||
+          parse_short_hash_or_reference(line) ||
+          parse_regular(line)
+      end
+
+      def parse_typed_container(line)
+        return unless line.include? '<'
+        # It's some kind of container that can only hold certain things
+        list = line.match(/\<(?<list>[^\>]+)\>/)['list']
+        list.split(',').each do |type|
+          @legal_types << Type.new(type.strip)
+        end
+        true
+      end
+
+      def parse_duck_type(line)
+        return unless line =~ /^#/
+        # It's a duck-typed object of some kind
+        methods = line.split(",").map { |p| p.strip.gsub(/^#/,'').to_sym }
+        @method_requirements += methods
+        true
+      end
+
+      def parse_fixed_list(line)
+        return unless line.include?('(')
+        # It's a fixed-length list
+        list = line.match(/\((?<list>[^\>]+)\)/)['list']
+        parts = list.split(',')
+        @length = parts.length
+        parts.each do |type|
+          @legal_types << Type.new(type.strip)
+        end
+        true
+      end
+
+      def parse_hash(line)
+        return unless line.include? 'Hash{'
+        # It's a hash with specific key-value pair types
+        parts = line.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
+        @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+        @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+      end
+
+      def parse_short_hash_or_reference(line)
+        return unless line.include? '{'
+        if parts = line.match(/\{(?<key_types>.+)\s*=\>\s*(?<value_types>[^\}]+)\}/)
+          @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+          @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
+        else
+          # It's a reference to another documented type defined someplace in
+          # the codebase. We can ignore the reference, and treat it like a
+          # normal type.
+          @legal_types << line.gsub(/\{|\}/, '').constantize
+        end
+        true
+      end
+
+      def parse_regular(line)
+        # It's a regular-ass type.
+        @legal_types << line.constantize
+      end
 
       def check_hash(thing)
         return true if @key_types.empty? or @value_types.empty?
