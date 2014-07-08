@@ -1,7 +1,7 @@
 require 'string'
 require 'parser/type'
 require 'parser/lines'
-require 'parser/contract'
+require 'contract'
 
 module Contraction
   module Parser
