@@ -21,14 +21,9 @@ module Contraction
       end
 
       b = binding
-      @rules.all? do |rule|
-        next true if rule.is_a?(Contraction::Parser::ReturnLine)
+      param_rules.all? do |rule|
         raise ArgumentError.new("#{rule.name} (#{named_args[rule.name].inspect}) must be a #{rule.type}") unless rule.valid?(named_args[rule.name])
-        if rule.contract
-          unless eval(rule.contract, b)
-            raise ArgumentError.new("#{rule.name} (#{rule.message}) must fullfill #{rule.contract.inspect}, but is #{named_args[rule.name].inspect}")
-          end
-        end
+        rule.evaluate_in_context(b, method_name, named_args[rule.name])
       end
     end
 
@@ -38,20 +33,25 @@ module Contraction
       h
       end
 
-      return_rule = @rules.select { |r| r.is_a?(Contraction::Parser::ReturnLine) }.first
       return true unless return_rule
       unless return_rule.valid?(result)
         raise ArgumentError.new("Return value of #{method_name} must be a #{return_rule.type}")
       end
       if return_rule.contract
         b = binding
-        unless eval(return_rule.contract, b)
-          raise ArgumentError.new("Return value of #{method_name} (#{return_rule.message}) must fullfill #{return_rule.contract.inspect}, but is #{result.inspect}")
-        end
+        return_rule.evaluate_in_context(b, method_name, result)
       end
     end
 
     private
+
+    def return_rule
+      @return_rule ||= @rules.select { |r| r.is_a?(Contraction::Parser::ReturnLine) }.first
+    end
+
+    def param_rules
+      @param_rules ||= @rules.select { |r| r.is_a?(Contraction::Parser::ParamLine) }
+    end
 
     def get_method_definition
       @params = mod.instance_method(method_name).parameters.map { |p| p.last }
