@@ -3,6 +3,7 @@ module Contraction
     class Type
       attr_reader :legal_types, :method_requirements, :length, :key_types, :value_types
 
+      # FIXME: There is still a lot of ugly in this method...
       def initialize(part)
         @legal_types         = []
         @method_requirements = []

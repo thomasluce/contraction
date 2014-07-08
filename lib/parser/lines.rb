@@ -2,6 +2,7 @@ module Contraction
   module Parser
     class TypedLine
       attr_reader :type, :contract, :message, :types
+      attr_writer :contract
 
       def initialize(args={})
         @type     = args[:type]
@@ -35,6 +36,9 @@ module Contraction
     end
 
     class ReturnLine < TypedLine
+      def name
+        nil
+      end
     end
   end
 end

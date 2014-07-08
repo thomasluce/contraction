@@ -3,7 +3,7 @@ require 'parser'
 
 describe Contraction::Parser do
   def parse(string)
-    Contraction::Parser.parse(string)
+    Contraction::Parser.parse_line(string)
   end
 
   context 'parsing' do
@@ -110,6 +110,7 @@ describe Contraction::Parser do
         expect(p.valid?({ foo: :bar })).to be false
       end
 
+      # TODO: Is this really needed? It might just be an odd convention: @param [{Thing}]...
       it 'can parse and verify struct-types'
     end
   end

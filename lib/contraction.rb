@@ -103,6 +103,7 @@ module Contraction
     instance_methods.each do |method_name|
       file_contents, line_no = read_file_for_method(instance, method_name)
 
+      # TODO: From this point on is where I want to replace things with the parser I made.
       args, returns = extract_params_and_return(file_contents[0..line_no-2].reverse)
       define_wrapped_method(mod, method_name, args, returns)
     end
