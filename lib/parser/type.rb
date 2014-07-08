@@ -44,8 +44,10 @@ module Contraction
             @key_types = parts['key_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
             @value_types = parts['value_types'].split(',').map { |t| t.include?('#') ? t.strip.gsub(/^#/, '').to_sym : t.strip.constantize }
           else
-            # It's a struct type.
-            # TODO: do that
+            # It's a reference to another documented type defined someplace in
+            # the codebase. We can ignore the reference, and treat it like a
+            # normal type.
+            @legal_types << part.gsub(/\{|\}/, '').constantize
           end
         else
           # It's a regular-ass type.

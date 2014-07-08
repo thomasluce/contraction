@@ -109,9 +109,6 @@ describe Contraction::Parser do
         expect(p.valid?({ Foo.new => Bar.new })).to be true
         expect(p.valid?({ foo: :bar })).to be false
       end
-
-      # TODO: Is this really needed? It might just be an odd convention: @param [{Thing}]...
-      it 'can parse and verify struct-types'
     end
   end
 end
