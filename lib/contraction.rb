@@ -1,4 +1,6 @@
 require 'string'
+require 'parser'
+
 module Contraction
   private
 
@@ -41,55 +43,15 @@ module Contraction
     return [args.reverse, returns]
   end
 
-  def self.define_wrapped_method(mod, method_name, args, returns)
-    arg_names = args.map { |a| a[1] }
-    arg_names.each do |name|
-      returns[-1] = returns[-1].gsub(name, "named_args[#{name.inspect}]")
-    end
-
+  def self.define_wrapped_method(mod, method_name, contract)
     old_method = mod.instance_method(method_name)
 
     arg_checks = []
     result_check = nil
     mod.send(:define_method, method_name) do |*method_args|
-      named_args = args.each_with_index.inject({}) do |h, (arg, index)|
-        type, name, message, contract = arg
-        h[name] = method_args[index]
-        h
-      end
-
-      b = binding
-      if arg_checks.empty?
-        arg_checks = args.map do |arg|
-          type, name, message, contract = arg
-          value = named_args[name]
-          checker = nil
-          lambda { |named_args|
-            raise ArgumentError.new("#{name} (#{value.inspect}) must be a #{type}") unless value.is_a?(type)
-            checker = eval("lambda { |named_args| #{contract} }", b) if checker.nil?
-            unless checker.call(named_args)
-              raise ArgumentError.new("#{name} (#{message}) must fullfill #{contract.inspect}, but is #{value.inspect}")
-            end
-          }
-        end
-      end
-      arg_checks.each { |c| c.call(named_args) }
-
+      contract.valid_args?(*method_args)
       result = old_method.bind(self).call(*method_args)
-
-      if result_check.nil?
-        checker = nil
-        result_check = lambda { |named_args|
-          type, message, contract = returns
-          raise ArgumentError.new("Return value of #{method_name} must be a #{type}") unless result.is_a?(type)
-          checker = eval("lambda { |named_args| #{contract} }", b) if checker.nil?
-          unless checker.call(named_args)
-            raise ArgumentError.new("Return value of #{method_name} (#{message}) must fullfill #{contract.inspect}, but is #{result.inspect}")
-          end
-        }
-      end
-      result_check.call(named_args)
-
+      contract.valid_return?(*method_args, result)
       result
     end
   end
@@ -103,9 +65,8 @@ module Contraction
     instance_methods.each do |method_name|
       file_contents, line_no = read_file_for_method(instance, method_name)
 
-      # TODO: From this point on is where I want to replace things with the parser I made.
-      args, returns = extract_params_and_return(file_contents[0..line_no-2].reverse)
-      define_wrapped_method(mod, method_name, args, returns)
+      contract = Contraction::Parser.parse(file_contents[0..line_no-2].reverse, mod, method_name)
+      define_wrapped_method(mod, method_name, contract)
     end
   end
 
