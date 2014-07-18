@@ -1,3 +1,4 @@
+# FIXME: Actually use the type parser in the actual parser... Duh.
 module Contraction
   module Parser
     class Type

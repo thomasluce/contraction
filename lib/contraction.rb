@@ -1,6 +1,8 @@
 require 'string'
 require 'parser'
 
+# TODO: Is there room here to use Delegator instead of re-writing things to get
+# a speed boost?
 module Contraction
   # Call this method to update contracts for any methods that may have been
   # added after the class/module file was loaded by some third-party code. It's
