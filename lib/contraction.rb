@@ -26,43 +26,11 @@ module Contraction
 
   private
 
-  RETURN_LINE_REGEX = /^#\s*@return\s+(?<type>\[[^\]]+\])?\s*(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
-  PARAM_LINE_REGEX  = /^#\s*@param\s+(?<type>\[[^\]]+\])?\s*(?<name>[^\s]+)\s+(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
-
   def self.read_file_for_method(instance, method_name)
     file, line = instance.method(method_name).source_location
     filename = File.expand_path(file)
     file_contents = File.read(filename).split("\n")
     return [file_contents, line]
-  end
-
-  def self.extract_params_and_return(lines)
-    args = []
-    returns = [Object, '', 'true']
-    lines.each do |line|
-      line = line.strip
-      next if line == ''
-      break unless line.start_with?('#')
-      break if line.start_with?('##')
-
-      if m = RETURN_LINE_REGEX.match(line)
-        type = m['type'].to_s.gsub(/(\[|\])/, '')
-        type = type == '' ? Object : type.constantize
-        contract = m['contract'].to_s.strip.gsub('return', "result")
-        contract = contract == '' ? 'true' : contract
-        contract = contract.gsub(/(^\{)|(\}$)/, '')
-        returns = [type, m['message'], contract]
-      elsif m = PARAM_LINE_REGEX.match(line)
-        type = m['type'].to_s.gsub(/(\[|\])/, '')
-        type = type == '' ? Object : type.constantize
-        contract = m['contract'].to_s.strip.gsub(m['name'], "named_args[#{m['name'].inspect}]")
-        contract = contract == '' ? 'true' : contract
-        contract = contract.gsub(/(^\{)|(\}$)/, '')
-        args << [type, m['name'], m['message'], contract]
-      end
-    end
-
-    return [args.reverse, returns]
   end
 
   def self.define_wrapped_method(mod, method_name, contract)

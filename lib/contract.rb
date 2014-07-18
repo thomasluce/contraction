@@ -58,7 +58,7 @@ module Contraction
     end
 
     def get_method_definition
-      @params = mod.instance_method(method_name).parameters.map { |p| p.last }
+      @params = mod.instance_method(method_name).parameters.map(&:last)
     end
 
     def update_rule_values
