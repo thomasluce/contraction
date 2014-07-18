@@ -17,7 +17,7 @@ module Contraction
     # contracts/docs apply to
     # @return [Contract] A Contract object that can be used to evaluate
     # correctness at run-time.
-    def self.parse(text, mod, method_name)
+    def self.parse(text, mod, method_name, type)
       lines = text.is_a?(String) ? text.split(/$/) : text
       results = []
       lines.each do |line|
@@ -28,7 +28,7 @@ module Contraction
       end
       results.compact!
 
-      Contract.new(results, mod, method_name)
+      Contract.new(results, mod, method_name, type)
     end
 
     # Parse a single line of text for @param and @return statements.

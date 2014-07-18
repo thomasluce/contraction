@@ -9,14 +9,14 @@ module Contraction
   # @param [Class] mod The module or class to update contracts for.
   def self.update_contracts(mod)
     instance = mod.allocate
-    instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
 
-    # FIXME: Deal with weather it is an instance or class method a bit nicer.
-    instance_methods.each do |method_name|
-      file_contents, line_no = read_file_for_method(instance, method_name)
+    methods_for(mod).each do |(type, methods)|
+      methods.each do |method_name|
+        file_contents, line_no = read_file_for_method(instance, method_name, type)
 
-      contract = Contraction::Parser.parse(file_contents[0..line_no-2].reverse, mod, method_name)
-      define_wrapped_method(mod, method_name, contract)
+        contract = Contraction::Parser.parse(file_contents[0..line_no-2].reverse, mod, method_name, type)
+        define_wrapped_method(mod, method_name, contract, type)
+      end
     end
   end
 
@@ -73,21 +73,34 @@ module Contraction
 
   private
 
-  def self.read_file_for_method(instance, method_name)
-    file, line = instance.method(method_name).source_location
+  def self.read_file_for_method(instance, method_name, type)
+    file, line = nil, nil
+    if type == :class
+      file, line = instance.class.method(method_name).source_location
+    elsif type == :instance
+      file, line = instance.method(method_name).source_location
+    else
+      raise ArgumentError.new("Unknown method type, #{type.inspect}")
+    end
     filename = File.expand_path(file)
     file_contents = File.read(filename).split("\n")
     return [file_contents, line]
   end
 
-  def self.define_wrapped_method(mod, method_name, contract)
-    old_method = mod.instance_method(method_name)
+  def self.define_wrapped_method(mod, method_name, contract, type)
+    old_method = type == :instance ? mod.instance_method(method_name) : mod.method(method_name)
 
     arg_checks = []
     result_check = nil
-    mod.send(:define_method, method_name) do |*method_args|
+    type = type == :class ? :define_singleton_method : :define_method
+    mod.send(type, method_name) do |*method_args|
       contract.valid_args?(*method_args)
-      result = old_method.bind(self).call(*method_args)
+      result = nil
+      if old_method.respond_to?(:bind)
+        result = old_method.bind(self).call(*method_args)
+      else
+        result = old_method.call(*method_args)
+      end
       contract.valid_return?(*method_args, result)
       result
     end

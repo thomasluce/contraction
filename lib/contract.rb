@@ -4,13 +4,13 @@ module Contraction
 
     # @params [Array<TypedLine>] rules The individual lines that define the
     # contract.
-    def initialize(rules, mod, method_name)
+    def initialize(rules, mod, method_name, type)
       @rules       = rules
       @mod         = mod
       @method_name = method_name
 
       update_rule_values
-      get_method_definition
+      get_method_definition(type)
     end
 
     # Test weather the arguments to a method are of the correct type, and meet
@@ -57,8 +57,13 @@ module Contraction
       @param_rules ||= @rules.select { |r| r.is_a?(Contraction::Parser::ParamLine) }
     end
 
-    def get_method_definition
-      @params = mod.instance_method(method_name).parameters.map(&:last)
+    def get_method_definition(type)
+      @params = []
+      if type == :class
+        @params = mod.method(method_name.to_sym).parameters.map(&:last)
+      else
+        @params = mod.instance_method(method_name.to_sym).parameters.map(&:last)
+      end
     end
 
     def update_rule_values

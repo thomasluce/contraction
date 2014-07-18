@@ -243,6 +243,27 @@ describe Contraction do
     end
   end
 
+  describe 'class methods' do
+    class ClassMethods
+      # Do some stuff
+      # @return [ClassMethods] self
+      def self.foobar
+      end
+
+      # @return [ClassMethods] self
+      def self.barbaz
+        self.allocate
+      end
+
+      include Contraction
+    end
+
+    it 'should work' do
+      expect(lambda { ClassMethods.foobar }).to raise_error
+      expect(lambda { ClassMethods.barbaz }).to_not raise_error
+    end
+  end
+
   describe 'instance gathering methods' do
     class MethodTestingClass
       def self.foobar
