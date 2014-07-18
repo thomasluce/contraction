@@ -242,4 +242,65 @@ describe Contraction do
       end
     end
   end
+
+  describe 'instance gathering methods' do
+    class MethodTestingClass
+      def self.foobar
+      end
+
+      def foo
+      end
+
+      private
+
+      def bar
+      end
+
+      # Interestingly, self.barbaz doesn't make it actually private, but class
+      # << self; def barbaz; end; end; will. It's because def object.thing
+      # defines a method on object (in this case self), and so is "re-opening"
+      # the class, making it public.
+      def self.barbaz
+      end
+      private_class_method :barbaz
+    end
+
+    describe '.instance_methods_for' do
+      it 'returs only public methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to_not include :bar
+      end
+
+      it 'returns instance methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to include :foo
+      end
+
+      it 'does not return class methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to_not include :foobar
+      end
+    end
+
+    describe '.class_methods_for' do
+      it 'returns only public methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to_not include :barbaz
+      end
+
+      it 'does not return instance methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to_not include :foo
+      end
+
+      it 'returns class methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to include :foobar
+      end
+    end
+
+    describe '.methods_for' do
+      it 'returns a hash containing both instance and class methods' do
+        expected_hash = {
+          class: Contraction.class_methods_for(MethodTestingClass),
+          instance: Contraction.instance_methods_for(MethodTestingClass)
+        }
+        expect(Contraction.methods_for(MethodTestingClass)).to eq expected_hash
+      end
+    end
+  end
 end

@@ -25,10 +25,44 @@ module Contraction
     update_contracts(mod)
   end
 
+  # Get all the public instance methods for a given class, that are unique to
+  # class (ie, not built-ins)
+  # @param [Class] klass The class to get the methods from
+  # @return [Array<Symbol>] The method names
   def self.instance_methods_for(klass)
     klass.public_instance_methods - Object.public_instance_methods - Module.public_instance_methods
   end
 
+  # Get all the public class methods for a given class that are unique to the
+  # class (ie, not built-ins). NOTE: doing something like the following _doesn't_
+  # make a class method private:
+  # class Foo
+  #     private
+  #     def self.foobar
+  #     end
+  # end
+  #
+  # That's because defining a method on an object, even `self`, re-opens the
+  # object to define the method on it. It's the same as saying `def
+  # some_object.foobar`, only in this case `some_object` is the handy-dandy
+  # `self`. To make that really private, you can do:
+  # class Foo
+  #     private
+  #     def self.foobar
+  #     end
+  #     private_class_method :foobar
+  # end
+  #
+  # ... or ...
+  # class Foo
+  #     private
+  #     class << self
+  #         def self.foobar
+  #         end
+  #     end
+  # end
+  # @param [Class] klass The class to get the methods from
+  # @return [Array<Symbol>] The method names
   def self.class_methods_for(klass)
     klass.public_methods - Object.public_methods - Module.public_methods
   end
