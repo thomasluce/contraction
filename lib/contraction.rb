@@ -11,6 +11,7 @@ module Contraction
     instance = mod.allocate
     instance_methods = (mod.instance_methods - Object.instance_methods - Contraction.instance_methods)
 
+    # FIXME: Deal with weather it is an instance or class method a bit nicer.
     instance_methods.each do |method_name|
       file_contents, line_no = read_file_for_method(instance, method_name)
 
@@ -22,6 +23,18 @@ module Contraction
   # Called by ruby when Contraction is included in a class.
   def self.included(mod)
     update_contracts(mod)
+  end
+
+  def self.instance_methods_for(klass)
+    klass.public_instance_methods - Object.public_instance_methods - Module.public_instance_methods
+  end
+
+  def self.class_methods_for(klass)
+    klass.instance_methods - Object.instance_methods - Module.instance_methods
+  end
+
+  def self.methods_for(klass)
+    { class: class_methods_for(klass), instance: instance_methods_for(klass) }
   end
 
   private
