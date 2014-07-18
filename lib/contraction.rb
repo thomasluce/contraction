@@ -30,7 +30,7 @@ module Contraction
   end
 
   def self.class_methods_for(klass)
-    klass.instance_methods - Object.instance_methods - Module.instance_methods
+    klass.public_methods - Object.public_methods - Module.public_methods
   end
 
   def self.methods_for(klass)
