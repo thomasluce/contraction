@@ -2,10 +2,14 @@ require 'rubygems'
 require 'bundler/setup'
 require 'jeweler'
 
+def version
+  @version ||= File.read("./VERSION").strip
+end
+
 Jeweler::Tasks.new do |gem|
   commit_date=DateTime.parse(`git log -1 --format=format:%ci`.chomp).strftime("%Y%m%d%H%I%M%S")
   gem.name = "contraction"
-  gem.version = File.read("./VERSION")
+  gem.version = version
   gem.summary = "A simple desgin-by-contract library"
   gem.description = "Using RDoc documentation as your contract definition, you get solid code, and good docs. Win-win!"
   gem.homepage = "https://github.com/thomasluce/contraction"
@@ -27,5 +31,11 @@ Jeweler::Tasks.new do |gem|
     fn =~ /^log\// ||
     fn =~ /^vendor\/cache\// ||
     fn =~ /^spec\//
+  end
+
+  desc 'Build and push to rubygems.org'
+  task :rubygems => :gemspec do
+    `gem build contraction.gemspec`
+    `gem push contraction-#{version}.gem`
   end
 end
