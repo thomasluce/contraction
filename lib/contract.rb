@@ -1,43 +1,80 @@
 module Contraction
-  private
-
   class Contract
-    attr_accessor :type, :name, :message, :contract
-    def initialize(args={})
-      @type = args[:type]
-      @name = args[:name]
-      @message = args[:message]
-      @contract = args[:contract] || ''
+    attr_reader :rules, :mod, :method_name, :params
 
-      create_checkers!
+    # @params [Array<TypedLine>] rules The individual lines that define the
+    # contract.
+    def initialize(rules, mod, method_name, type)
+      @rules       = rules
+      @mod         = mod
+      @method_name = method_name
+
+      update_rule_values
+      get_method_definition(type)
     end
 
-    def can_check?
-      @type_checker || @contract_checker
+    # Test weather the arguments to a method are of the correct type, and meet
+    # the correct contractual obligations.
+    def valid_args?(*method_args)
+      return true if @rules.nil?
+      named_args = params.each_with_index.inject({}) do |h, (param, index)|
+        h[param.to_s] = method_args[index]
+      h
+      end
+
+      b = binding
+      param_rules.all? do |rule|
+        raise ArgumentError.new("#{rule.name} (#{named_args[rule.name].inspect}) must be a #{rule.type}") unless rule.valid?(named_args[rule.name])
+        rule.evaluate_in_context(b, method_name, named_args[rule.name])
+      end
     end
 
-    def check!(value, named_args)
-      @type_checker.call(value, named_args) if @type_checker
-      if @contract_checker
-        raise ArgumentError.new(contract_message(value)) unless @contract_checker.call(value, named_args)
+    # Tests weather or not the return value is of the correct type and meets
+    # the correct contractual obligations.
+    def valid_return?(*method_args, result)
+      named_args = params.each_with_index.inject({}) do |h, (param, index)|
+        h[param] = method_args[index]
+      h
+      end
+
+      return true unless return_rule
+      unless return_rule.valid?(result)
+        raise ArgumentError.new("Return value of #{method_name} must be a #{return_rule.type}")
+      end
+      if return_rule.contract
+        b = binding
+        return_rule.evaluate_in_context(b, method_name, result)
       end
     end
 
     private
 
-    def create_checkers!
-      if type
-        @type_checker = lambda { |value, named_args| raise ArgumentError.new(type_message(value)) unless value.is_a?(type) }
+    def return_rule
+      @return_rule ||= @rules.select { |r| r.is_a?(Contraction::Parser::ReturnLine) }.first
+    end
+
+    def param_rules
+      @param_rules ||= @rules.select { |r| r.is_a?(Contraction::Parser::ParamLine) }
+    end
+
+    def get_method_definition(type)
+      @params = []
+      if type == :class
+        @params = mod.method(method_name.to_sym).parameters.map(&:last)
+      else
+        @params = mod.instance_method(method_name.to_sym).parameters.map(&:last)
       end
-      @contract_checker = eval("lambda { |result, named_args| #{contract} }") unless contract == ''
     end
 
-    def type_message(value)
-      "#{name} (#{value.inspect}) must be a #{type}"
-    end
+    def update_rule_values
+      names = rules.map(&:name).compact.uniq
 
-    def contract_message(value)
-      "#{name} (#{message}) must fullfill #{contract.inspect}, but is #{value.inspect}"
+      rules.each do |rule|
+        names.each do |name|
+          rule.contract.gsub!(name, "named_args['#{name}']")
+        end
+        rule.contract.gsub!('return', 'result')
+      end
     end
   end
 end

@@ -111,13 +111,13 @@ describe Contraction do
       it "raises an error on incorrect types" do
         lambda {
           ReturnWithTypeAndContract.new.foobar(:foobar_sym)
-        }.should raise_error(ArgumentError)
+        }.should raise_error
       end
 
       it "raises an error on bad contract enforcement" do
         lambda {
           ReturnWithTypeAndContract.new.foobar("no foo or bar here")
-        }.should raise_error(ArgumentError)
+        }.should raise_error
       end
     end
 
@@ -150,7 +150,7 @@ describe Contraction do
       it "raises an error on non-contract-matching values" do
         lambda {
           ReturnWithContract.new.foobar(:no_foo_or_bar_in_symbol)
-        }.should raise_error(ArgumentError)
+        }.should raise_error
       end
     end
   end
@@ -230,11 +230,11 @@ describe Contraction do
       end
 
       it "raises an error if the contract is not matched" do
-        lambda { ParamTypeAndContract.new.foobar("not b-a-r") }.should raise_error(ArgumentError)
+        lambda { ParamTypeAndContract.new.foobar("not b-a-r") }.should raise_error
       end
 
       it "raises an error if the type is not matched" do
-        lambda { ParamTypeAndContract.new.foobar(:bar) }.should raise_error(ArgumentError)
+        lambda { ParamTypeAndContract.new.foobar(:bar) }.should raise_error
       end
 
       it "allows the method call if the contract and type are matched" do
@@ -269,7 +269,89 @@ describe Contraction do
     end
 
     it "applies contracts and type checks" do
-      lambda { WithClassMethods.foo("no b.a.r") }.should raise_error(ArgumentError)
+      lambda { WithClassMethods.foo("no b.a.r") }.should raise_error
+    end
+  end
+
+  describe 'class methods' do
+    class ClassMethods
+      # Do some stuff
+      # @return [ClassMethods] self
+      def self.foobar
+      end
+
+      # @return [ClassMethods] self
+      def self.barbaz
+        self.allocate
+      end
+
+      include Contraction
+    end
+
+    it 'should work' do
+      expect(lambda { ClassMethods.foobar }).to raise_error
+      expect(lambda { ClassMethods.barbaz }).to_not raise_error
+    end
+  end
+
+  describe 'instance gathering methods' do
+    class MethodTestingClass
+      def self.foobar
+      end
+
+      def foo
+      end
+
+      private
+
+      def bar
+      end
+
+      # Interestingly, self.barbaz doesn't make it actually private, but class
+      # << self; def barbaz; end; end; will. It's because def object.thing
+      # defines a method on object (in this case self), and so is "re-opening"
+      # the class, making it public.
+      def self.barbaz
+      end
+      private_class_method :barbaz
+    end
+
+    describe '.instance_methods_for' do
+      it 'returs only public methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to_not include :bar
+      end
+
+      it 'returns instance methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to include :foo
+      end
+
+      it 'does not return class methods' do
+        expect(Contraction.instance_methods_for(MethodTestingClass)).to_not include :foobar
+      end
+    end
+
+    describe '.class_methods_for' do
+      it 'returns only public methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to_not include :barbaz
+      end
+
+      it 'does not return instance methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to_not include :foo
+      end
+
+      it 'returns class methods' do
+        expect(Contraction.class_methods_for(MethodTestingClass)).to include :foobar
+      end
+    end
+
+    describe '.methods_for' do
+      it 'returns a hash containing both instance and class methods' do
+        expected_hash = {
+          class: Contraction.class_methods_for(MethodTestingClass),
+          instance: Contraction.instance_methods_for(MethodTestingClass)
+        }
+        expect(Contraction.methods_for(MethodTestingClass)).to eq expected_hash
+      end
     end
   end
 end
