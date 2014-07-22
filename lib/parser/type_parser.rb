@@ -85,7 +85,7 @@ module Contraction
     end
   end
 
-  class SizedContainer
+  class SizedContainer < TypedContainer
   end
 
   class TypeParser
@@ -95,9 +95,7 @@ module Contraction
       # We are going to walk though this one at a time, popping off the
       # end, and seeing if the list of thing we have so far matches any
       # known rules, being as greedy as possible.
-      # TODO: Make sure that the ordering is correct; I want to get a hash
-      # before other types, for example.
-      things = [:typed_container, :type_list, :reference, :hash, :sized_container]
+      things = [:typed_container, :sized_container, :type_list, :reference, :hash]
       something_happened = false
       data = []
       begin
@@ -110,6 +108,8 @@ module Contraction
           end
         end
       end while something_happened
+
+      raise "Type parse error #{@stack.reverse.join ' '}" unless @stack.compact.empty?
       data.flatten
     end
 
@@ -127,7 +127,7 @@ module Contraction
 
     # A type is either hash, or any class-name like thing
     def self.type
-      reference || hash || typed_container || class_name
+      reference || hash || typed_container || sized_container || class_name
     end
 
     # A type-list is a Type, optionally followed by a comma and another
@@ -267,7 +267,46 @@ module Contraction
       return ReferenceType.new t
     end
 
+    # A sized container is like a typed container, except it has a type for
+    # every member of the set. So if there are 3 types in the type list, the
+    # final type must be a container with exactly three members, conforming to
+    # their respective types. An example would be a Vector3 class, with the
+    # initializer defined as either 3 floats, or a Array[Float, Float, Float]
     def self.sized_container
+      class_type = class_name
+
+      bracket = @stack.pop
+      if bracket.nil?
+        if class_type
+          @stack.push class_type.klass.to_s
+        end
+        return nil
+      end
+      if bracket != '['
+        @stack.push bracket
+
+        if class_type
+          @stack.push class_type.klass.to_s
+        end
+        return nil
+      end
+
+      types = type_list
+      if !types
+        @stack.push bracket
+
+        if class_type
+          @stack.push class_type.klass.to_s
+        end
+        return nil
+      end
+
+      bracket2 = @stack.pop
+      if bracket2.nil? || bracket2 != ']'
+        raise "Expected ']', got #{bracket2}: #{@stack.inspect}"
+      end
+
+      SizedContainer.new(class_type, types)
     end
   end
 end

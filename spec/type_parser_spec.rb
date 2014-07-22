@@ -124,5 +124,13 @@ describe Contraction::TypeParser do
     end
   end
 
-  context 'sized containers'
+  context 'sized containers' do
+    it 'works like the typed container' do
+      # An array with an integer in the first place, and a string in the second.
+      t = Contraction::TypeParser.parse("Array[Integer,String]")
+      expect(t.first).to be_a Contraction::SizedContainer
+      expect(t.first.type_list.works_as_a?(Integer)).to be true
+      expect(t.first.type_list.works_as_a?(String)).to be true
+    end
+  end
 end
