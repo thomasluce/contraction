@@ -7,7 +7,7 @@ require 'contract'
 module Contraction
   module Parser
     RETURN_LINE_REGEX = /^#\s*@return\s+(?<type>\[[^\]]+\])?\s*(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
-    PARAM_LINE_REGEX  = /^#\s*@param\s+(?<type>\[[^\]]+\])?\s*(?<name>[^\s]+)\s+(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
+    PARAM_LINE_REGEX  = /^#\s*@param\s+(?<type>\[[^\]]+\])?\s*(?<name>[^\s]+)\s*(?<message>[^{]+)?(?<contract>\{([^}]+)\})?/
 
     # Parses text passed to it for a given method for RDoc @param and @return
     # lines to build contracts.

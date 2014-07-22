@@ -16,9 +16,6 @@ module Contraction
 
       def parse(line)
         @type = Contraction::TypeParser.parse(line).first
-      rescue => e
-        puts e
-        @type = nil
       end
     end
   end

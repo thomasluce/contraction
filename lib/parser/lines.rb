@@ -42,7 +42,7 @@ module Contraction
       attr_reader :name
 
       def initialize(args={})
-        super(args)
+        super
         @name = args[:name]
       end
 
