@@ -11,7 +11,7 @@ module Contraction
       /^</, /^>/,
       /^,/,
       /^#/,
-      /(H(?!ash))?[^=\{\[\(<>\)\]\},#]+/
+      /([a-z_]+[a-z0-9_]*|(H(?!ash)))?[^=\{\[\(<>\)\]\},#]+/
     ]
 
     def self.lex(text)
@@ -21,7 +21,9 @@ module Contraction
 
         TOKENS.each do |r|
           if m = text.match(r)
-            stack << m[0].strip
+            if m[0].strip != ''
+              stack << m[0].strip
+            end
             text.sub! r, ''
             changed = true
             break
@@ -42,7 +44,22 @@ module Contraction
     end
 
     def works_as_a?(thing)
-      thing == klass
+      thing == klass || thing.is_a?(klass)
+    end
+
+    def check(thing)
+      works_as_a?(thing)
+    end
+  end
+
+  class DuckType
+    attr_reader :method
+    def initialize(method)
+      @method = method
+    end
+
+    def check(thing)
+      thing.respond_to? method.to_sym
     end
   end
 
@@ -55,6 +72,20 @@ module Contraction
     def works_as_a?(thing)
       types.any? { |t| t.works_as_a? thing }
     end
+
+    def check(thing)
+      # The only time that we need to match all instead of any is with
+      # duck-typing, so we just special-case it here.
+      if types.all? { |t| t.is_a? Contraction::DuckType }
+        return types.all? { |t| t.check(thing) }
+      else
+        return types.any? { |t| t.check(thing) }
+      end
+    end
+
+    def size
+      types.size
+    end
   end
 
   class HashType
@@ -62,6 +93,12 @@ module Contraction
     def initialize(key_type, value_type)
       @key_type = key_type
       @value_type = value_type
+    end
+
+    def check(thing)
+      thing.is_a?(Hash) &&
+        thing.keys.all? { |k| key_type.check(k) } &&
+        thing.values.all? { |v| value_type.check(v) }
     end
   end
 
@@ -76,6 +113,17 @@ module Contraction
     def works_as_a?(thing)
       type_list.works_as_a? thing
     end
+
+    def check(thing)
+      return false if !class_name.nil? && !class_name.check(thing)
+      thing.all? { |v| type_list.works_as_a? v }
+    end
+  end
+
+  class SizedContainer < TypedContainer
+    def check(thing)
+      super && thing.size == type_list.size
+    end
   end
 
   class ReferenceType
@@ -83,9 +131,10 @@ module Contraction
     def initialize(klass)
       @klass = klass
     end
-  end
 
-  class SizedContainer < TypedContainer
+    def check(thing)
+      thing.is_a? klass
+    end
   end
 
   class TypeParser
@@ -95,7 +144,7 @@ module Contraction
       # We are going to walk though this one at a time, popping off the
       # end, and seeing if the list of thing we have so far matches any
       # known rules, being as greedy as possible.
-      things = [:typed_container, :sized_container, :type_list, :reference, :hash]
+      things = [:typed_container, :sized_container, :type_list, :reference, :hash, :duck_type]
       something_happened = false
       data = []
       begin
@@ -125,9 +174,22 @@ module Contraction
       end
     end
 
+    # A duck-type is a thing prefaced with '#', indicating that it must have
+    # that method.
+    def self.duck_type
+      thing = @stack.pop
+      return nil if thing.nil?
+      if thing != '#'
+        @stack.push thing
+        return nil
+      end
+
+      DuckType.new @stack.pop
+    end
+
     # A type is either hash, or any class-name like thing
     def self.type
-      reference || hash || typed_container || sized_container || class_name
+      reference || hash || typed_container || sized_container || class_name || duck_type
     end
 
     # A type-list is a Type, optionally followed by a comma and another
@@ -144,8 +206,8 @@ module Contraction
       end
       things.pop # Remove the ',' from the list
 
-      things << type_list
-      TypeList.new(things)
+      things << type_list.types
+      TypeList.new(things.flatten)
     end
 
     # A hash starts with an optional "Hash", and this then followed by an
@@ -282,7 +344,7 @@ module Contraction
         end
         return nil
       end
-      if bracket != '['
+      if bracket != '('
         @stack.push bracket
 
         if class_type
@@ -302,7 +364,7 @@ module Contraction
       end
 
       bracket2 = @stack.pop
-      if bracket2.nil? || bracket2 != ']'
+      if bracket2.nil? || bracket2 != ')'
         raise "Expected ']', got #{bracket2}: #{@stack.inspect}"
       end
 

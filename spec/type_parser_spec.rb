@@ -127,10 +127,18 @@ describe Contraction::TypeParser do
   context 'sized containers' do
     it 'works like the typed container' do
       # An array with an integer in the first place, and a string in the second.
-      t = Contraction::TypeParser.parse("Array[Integer,String]")
+      t = Contraction::TypeParser.parse("Array(Integer,String)")
       expect(t.first).to be_a Contraction::SizedContainer
       expect(t.first.type_list.works_as_a?(Integer)).to be true
       expect(t.first.type_list.works_as_a?(String)).to be true
+    end
+  end
+
+  context 'duck typing' do
+    it 'parses a duck type' do
+      t = Contraction::TypeParser.parse '#foo'
+      expect(t.first.types.first).to be_a Contraction::DuckType
+      expect(t.first.types.first.method).to eq 'foo'
     end
   end
 end

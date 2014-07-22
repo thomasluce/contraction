@@ -61,6 +61,12 @@ describe Contraction do
             thing_to_return
           end
 
+          # Do something on the class
+          # @return [Hash{Integer => Array<String>}]
+          def barbaz
+            { 1 => ['foo', 'bar'] }
+          end
+
           include Contraction
         end
       end
@@ -79,6 +85,12 @@ describe Contraction do
         lambda {
           ReturnType.new.foobar(:thing)
         }.should raise_error(ArgumentError)
+      end
+
+      context 'with a complex type' do
+        it 'should not break when the type is correct' do
+          lambda { ReturnType.new.barbaz }.should_not raise_error
+        end
       end
     end
 
