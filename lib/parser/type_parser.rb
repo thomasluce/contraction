@@ -206,7 +206,8 @@ module Contraction
       end
       things.pop # Remove the ',' from the list
 
-      things << type_list.types
+      next_list = type_list
+      things << next_list.types if next_list
       TypeList.new(things.flatten)
     end
 
